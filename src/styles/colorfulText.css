@@ -19,12 +19,18 @@
   -moz-box-shadow: 0px 4px 28px -1px rgba(76, 201, 240, 1);
   box-shadow: 0px 4px 28px -1px rgba(76, 201, 240, 1);
 }
-.icon{
-    margin-right: 0.2em;
-    color: #1be7ff;
+.icon {
+  margin-right: 0.2em;
+  color: #1be7ff;
 }
 span {
   color: #1be7ff;
   font-weight: 900;
   font-style: italic;
+}
+@media screen and (max-width: 600px) {
+  .colorful-text,
+  .icon {
+    font-size: small;
+  }
 }
