@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import "../styles/webcam.css";
 import Webcam from "react-webcam";
 
+// defining the constraints for the photo
 const videoContraints = {
   width: 1280,
   height: 720,
@@ -9,6 +10,7 @@ const videoContraints = {
 };
 
 const Main = () => {
+  // use ref does not re renders every time it changes 
   const webcamRef = useRef(null);
   const capture = useCallback(() => {
     const imgSrc = webcamRef.current.getScreenshot();
