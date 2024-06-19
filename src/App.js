@@ -1,57 +1,82 @@
-import { useRef, useEffect } from "react";
-import "./App.css";
-import Webcam from "react-webcam";
-import * as faceDetection from "@tensorflow-models/face-detection";
-import "@tensorflow/tfjs-backend-webgl";
+import React, { useRef, useEffect, useState } from 'react';
+import './App.css';
+import * as tf from '@tensorflow/tfjs';
+import * as faceDetection from '@tensorflow-models/face-detection';
 
-const App = () => {
-  const webcamRef = useRef(null);
+function App() {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [detector, setDetector] = useState(null);
 
-  const handleFaceDetection = async () => {
-    const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
-    const detectorConfig = {
-      runtime: "mediapipe",
+  useEffect(() => {
+    const loadModel = async () => {
+      await tf.setBackend('webgl');
+      const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
+      const detectorConfig = {
+        runtime: 'tfjs', // Use 'mediapipe' if you want to use MediaPipe
+        maxFaces: 1
+      };
+      const detector = await faceDetection.createDetector(model, detectorConfig);
+      setDetector(detector);
     };
-    const detector = await faceDetection.createDetector(model, detectorConfig);
+    loadModel();
+  }, []);
 
-    // Ensure that the video element is available
-    if (webcamRef.current && webcamRef.current.video.readyState === 4) {
-      const video = webcamRef.current.video;
-      const faces = await detector.estimateFaces(video);
+  useEffect(() => {
+    const startVideo = () => {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        })
+        .catch(err => {
+          console.error('Error accessing webcam: ', err);
+        });
+    };
 
-      console.log(faces); // Log the detected faces for debugging
-    } else {
-      console.error('Video not ready');
+    if (detector) {
+      startVideo();
+    }
+  }, []);
+
+  const detectFaces = async () => {
+    if (videoRef.current && detector) {
+      const predictions = await detector.estimateFaces(videoRef.current);
+
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+      if (predictions.length > 0) {
+        predictions.forEach(prediction => {
+          const start = prediction.box.startPoint;
+          const end = prediction.box.endPoint;
+          const size = [end[0] - start[0], end[1] - start[1]];
+
+          ctx.beginPath();
+          ctx.rect(start[0], start[1], size[0], size[1]);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'red';
+          ctx.stroke();
+        });
+      }
     }
   };
 
   useEffect(() => {
     const interval = setInterval(() => {
-      handleFaceDetection();
-    }, 1000); // Run detection every second
+      detectFaces();
+    }, 100);
 
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="App">
-      <header className="header">
-        <div className="title">Face Shape</div>
-      </header>
-      <Webcam
-        audio={false}
-        ref={webcamRef}
-        style={{
-          position: "absolute",
-          margin: "auto",
-          textAlign: "center",
-          top: 100,
-          left: 0,
-          right: 0,
-        }}
-      />
+      <h1>Face Detection with TensorFlow.js</h1>
+      <video ref={videoRef} style={{ display: 'none' }} width="640" height="480" />
+      <canvas ref={canvasRef} width="640" height="480" />
     </div>
   );
-};
+}
 
 export default App;
